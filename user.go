@@ -81,7 +81,10 @@ func (b *Balance) Available(t time.Time) bool {
 }
 
 func (b *Balance) Expired(t time.Time) bool {
-	return b.Expiry.After(t)
+	if b.Expiry.IsZero() {
+		return false // no expiry
+	}
+	return t.After(b.Expiry)
 }
 
 func (b *Balance) Debit(t time.Time, mins int) (int, error) {
