@@ -9,7 +9,10 @@ import (
 	"time"
 )
 
-const gracePeriod = time.Minute * 1
+const (
+	gracePeriod = time.Minute * 1
+	deadTimeout = time.Minute * 1
+)
 
 type Server struct {
 	User     map[string]*User
@@ -70,7 +73,17 @@ func (s *Server) tick() (acted bool) {
 		if now.Sub(u.StartTime) < gracePeriod {
 			continue
 		}
+
 		acted = true
+
+		// Stop session if user hasn't checked in recently.
+		if now.Sub(u.LastSeen) > deadTimeout {
+			log.Printf("stopping %s for inactivity")
+			u.Stop()
+			continue
+		}
+
+		// Debit user 1 minute.
 		if err := u.Debit(now, 1); err != nil {
 			log.Printf("debiting %s: %v", name, err)
 			u.Stop()
@@ -100,7 +113,7 @@ func (s *Server) Stop(username *string, _ *struct{}) error {
 	return nil
 }
 
-func (s *Server) OK(username *string, ok *bool) error {
+func (s *Server) IsOpen(username *string, ok *bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	u := s.User[*username]
@@ -108,5 +121,17 @@ func (s *Server) OK(username *string, ok *bool) error {
 		return errors.New("user not found")
 	}
 	*ok = u.Running()
+	return nil
+}
+
+func (s *Server) CheckIn(username *string, ok *bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u := s.User[*username]
+	if u == nil {
+		return errors.New("user not found")
+	}
+	*ok = u.Running()
+	u.LastSeen = time.Now()
 	return nil
 }

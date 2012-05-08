@@ -11,6 +11,7 @@ var ZeroBalance = errors.New("no minutes available")
 type User struct {
 	Balance   []*Balance
 	StartTime time.Time
+	LastSeen  time.Time
 }
 
 func (u *User) Start() error {
@@ -19,6 +20,7 @@ func (u *User) Start() error {
 		return err
 	}
 	u.StartTime = t
+	u.LastSeen = t
 	return nil
 }
 
