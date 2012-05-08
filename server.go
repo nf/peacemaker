@@ -102,6 +102,7 @@ func (s *Server) Start(username *string, ok *bool) error {
 	if err := u.Start(); err != nil {
 		log.Printf("can't start %s: %v", *username, err)
 	} else {
+		log.Printf("start %s", *username)
 		*ok = true
 	}
 	return nil
@@ -115,6 +116,7 @@ func (s *Server) Stop(username *string, _ *struct{}) error {
 		return errors.New("user not found")
 	}
 	u.Stop()
+	log.Printf("stop %s", *username)
 	return nil
 }
 
