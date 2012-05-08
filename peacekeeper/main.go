@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 	"time"
@@ -15,6 +16,7 @@ const checkinInterval = time.Second * 10
 var (
 	serverAddr = flag.String("server", "localhost:7020", "server address")
 	username   = flag.String("user", "", "user name")
+	sleepOnly  = flag.Bool("sleep", false, "don't halt; only sleep")
 )
 
 var signals = make(chan os.Signal)
@@ -76,5 +78,12 @@ func handleSignals(c *rpc.Client, done chan bool) {
 
 func shutdown() {
 	log.Println("shutting down machine")
-	// TODO(adg): actually shut down
+	opt := "-h"
+	if *sleepOnly {
+		opt = "-s"
+	}
+	err := exec.Command("shutdown", opt, "now").Run()
+	if err != nil {
+		log.Println("shutdown:", err)
+	}
 }
