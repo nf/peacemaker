@@ -9,8 +9,15 @@ type Kind interface {
 }
 
 var kindMap = map[string]Kind{
+	"anytime": Anytime{},
 	"weekday": Weekday{},
 	"weekend": Weekend{},
+}
+
+type Anytime struct{}
+
+func (k Anytime) Available(_ time.Time) bool {
+	return true
 }
 
 type Weekday struct{}
