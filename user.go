@@ -71,6 +71,15 @@ func (u *User) AvailableBalance(t time.Time) *Balance {
 	return nil
 }
 
+func (u *User) SetBalance(kind string, minutes int) {
+	for _, b := range u.Balance {
+		if b.Kind != kind {
+			continue
+		}
+		b.Minutes = minutes
+	}
+}
+
 type Balance struct {
 	Kind     string
 	Minutes  int

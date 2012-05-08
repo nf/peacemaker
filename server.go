@@ -11,6 +11,8 @@ import (
 
 type Server struct {
 	User     map[string]*User
+	Refill   []*Refill
+
 	datafile string
 	mu       sync.Mutex
 }
@@ -33,7 +35,7 @@ func (s *Server) load() error {
 		return err
 	}
 	defer f.Close()
-	return json.NewDecoder(f).Decode(&s.User)
+	return json.NewDecoder(f).Decode(&s)
 }
 
 func (s *Server) save() error {
@@ -42,7 +44,7 @@ func (s *Server) save() error {
 		return err
 	}
 	defer f.Close()
-	return json.NewEncoder(f).Encode(&s.User)
+	return json.NewEncoder(f).Encode(&s)
 }
 
 func (s *Server) loop() {
@@ -59,6 +61,11 @@ func (s *Server) loop() {
 func (s *Server) tick(t time.Time) (acted bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	for _, r := range s.Refill {
+		if r.Do(t, s.User) {
+			acted = true
+		}
+	}
 	for name, u := range s.User {
 		if !u.Running(t) {
 			continue

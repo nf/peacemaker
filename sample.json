@@ -1,0 +1,24 @@
+{
+	"User": {
+		"name": {
+			"Balance": [
+				{"Kind": "weekend", "Minutes": 300, "Priority": 1}
+				{"Kind": "weekday", "Minutes": 180, "Priority": 2},
+			]
+		}
+	},
+	"Refill": [
+		{
+			"RunAt": "2012-05-14T00:00:00+10:00",
+			"Period": 604800000000000,
+			"Balance": "weekday",
+			"Minutes": 180
+		},
+		{
+			"RunAt": "2012-05-14T00:00:00+10:00",
+			"Period": 604800000000000,
+			"Balance": "weekend",
+			"Minutes": 300
+		}
+	]
+}
