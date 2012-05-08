@@ -55,7 +55,7 @@ func (s *Server) loop() {
 	for _ = range t.C {
 		if s.tick() {
 			if err := s.save(); err != nil {
-				log.Fatalf("saving: %v")
+				log.Fatalf("saving: %v", err)
 			}
 		}
 	}
@@ -78,28 +78,33 @@ func (s *Server) tick() (acted bool) {
 
 		// Stop session if user hasn't checked in recently.
 		if now.Sub(u.LastSeen) > deadTimeout {
-			log.Printf("stopping %s for inactivity")
+			log.Printf("stopping %s: inactive", name)
 			u.Stop()
 			continue
 		}
 
 		// Debit user 1 minute.
 		if err := u.Debit(now, 1); err != nil {
-			log.Printf("debiting %s: %v", name, err)
+			log.Printf("stopping %s: %v", name, err)
 			u.Stop()
 		}
 	}
 	return
 }
 
-func (s *Server) Start(username *string, _ *struct{}) error {
+func (s *Server) Start(username *string, ok *bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	u := s.User[*username]
 	if u == nil {
 		return errors.New("user not found")
 	}
-	return u.Start()
+	if err := u.Start(); err != nil {
+		log.Printf("can't start %s: %v", *username, err)
+	} else {
+		*ok = true
+	}
+	return nil
 }
 
 func (s *Server) Stop(username *string, _ *struct{}) error {
