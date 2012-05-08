@@ -9,11 +9,6 @@ import (
 	"time"
 )
 
-const (
-	gracePeriod = time.Minute * 1
-	deadTimeout = time.Minute * 1
-)
-
 type Server struct {
 	User     map[string]*User
 	datafile string
@@ -51,9 +46,9 @@ func (s *Server) save() error {
 }
 
 func (s *Server) loop() {
-	t := time.NewTicker(time.Minute)
-	for _ = range t.C {
-		if s.tick() {
+	tick := time.NewTicker(time.Minute)
+	for t := range tick.C {
+		if s.tick(t) {
 			if err := s.save(); err != nil {
 				log.Fatalf("saving: %v", err)
 			}
@@ -61,33 +56,19 @@ func (s *Server) loop() {
 	}
 }
 
-func (s *Server) tick() (acted bool) {
+func (s *Server) tick(t time.Time) (acted bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	now := time.Now()
 	for name, u := range s.User {
-		if !u.Running() {
+		if !u.Running(t) {
 			continue
 		}
-		// Don't deduct minutes during grace period.
-		if now.Sub(u.StartTime) < gracePeriod {
-			continue
-		}
-
-		acted = true
-
-		// Stop session if user hasn't checked in recently.
-		if now.Sub(u.LastSeen) > deadTimeout {
-			log.Printf("stopping %s: inactive", name)
-			u.Stop()
-			continue
-		}
-
 		// Debit user 1 minute.
-		if err := u.Debit(now, 1); err != nil {
+		if err := u.Debit(t, 1); err != nil {
 			log.Printf("stopping %s: %v", name, err)
 			u.Stop()
 		}
+		acted = true
 	}
 	return
 }
@@ -99,7 +80,7 @@ func (s *Server) Start(username *string, ok *bool) error {
 	if u == nil {
 		return errors.New("user not found")
 	}
-	if err := u.Start(); err != nil {
+	if err := u.Start(time.Now()); err != nil {
 		log.Printf("can't start %s: %v", *username, err)
 	} else {
 		log.Printf("start %s", *username)
@@ -127,7 +108,7 @@ func (s *Server) IsOpen(username *string, ok *bool) error {
 	if u == nil {
 		return errors.New("user not found")
 	}
-	*ok = u.Running()
+	*ok = u.Running(time.Now())
 	return nil
 }
 
@@ -138,7 +119,6 @@ func (s *Server) CheckIn(username *string, ok *bool) error {
 	if u == nil {
 		return errors.New("user not found")
 	}
-	*ok = u.Running()
-	u.LastSeen = time.Now()
+	*ok = u.Running(time.Now())
 	return nil
 }

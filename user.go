@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+const (
+	deadTimeout = time.Minute * 2
+	gracePeriod = time.Minute * 1
+)
+
 var ZeroBalance = errors.New("no minutes available")
 
 type User struct {
@@ -14,25 +19,26 @@ type User struct {
 	LastSeen  time.Time
 }
 
-func (u *User) Start() error {
-	t := time.Now()
-	if err := u.Debit(t, 1); err != nil {
-		return err
-	}
+func (u *User) Start(t time.Time) error {
 	u.StartTime = t
-	u.LastSeen = t
-	return nil
-}
-
-func (u *User) Running() bool {
-	return !u.StartTime.IsZero()
+	return u.Debit(t, 1)
 }
 
 func (u *User) Stop() {
 	u.StartTime = time.Time{}
+	u.LastSeen = time.Time{}
+}
+
+func (u *User) Running(t time.Time) bool {
+	return t.Sub(u.LastSeen) < deadTimeout
 }
 
 func (u *User) Debit(t time.Time, mins int) error {
+	u.LastSeen = t
+	// Don't deduct minutes during grace period.
+	if t.Sub(u.StartTime) < gracePeriod {
+		return nil
+	}
 	for mins > 0 {
 		b := u.AvailableBalance(t)
 		if b == nil {
@@ -58,7 +64,7 @@ func (u *User) Debit(t time.Time, mins int) error {
 func (u *User) AvailableBalance(t time.Time) *Balance {
 	sort.Sort(balanceSlice(u.Balance)) // sort by Priority
 	for _, b := range u.Balance {
-		if b.Available(t) && !b.Expired(t) {
+		if b.Available(t) {
 			return b
 		}
 	}
@@ -68,7 +74,6 @@ func (u *User) AvailableBalance(t time.Time) *Balance {
 type Balance struct {
 	Kind     string
 	Minutes  int
-	Expiry   time.Time
 	Priority int // balances with lower priorities will be drained first
 }
 
@@ -80,20 +85,7 @@ func (b *Balance) Available(t time.Time) bool {
 	return k.Available(t)
 }
 
-func (b *Balance) Expired(t time.Time) bool {
-	if b.Expiry.IsZero() {
-		return false // no expiry
-	}
-	return t.After(b.Expiry)
-}
-
 func (b *Balance) Debit(t time.Time, mins int) (int, error) {
-	if !b.Available(t) {
-		return 0, errors.New("balance not available at this time")
-	}
-	if b.Expired(t) {
-		return 0, errors.New("balance expired")
-	}
 	if b.Minutes <= mins {
 		n := b.Minutes
 		b.Minutes = 0
