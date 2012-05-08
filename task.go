@@ -3,8 +3,8 @@ package main
 import "time"
 
 type Refill struct {
-	RunAt  time.Time
-	Period time.Duration
+	RunAt   time.Time
+	Period  time.Duration
 	Balance string
 	Minutes int
 }

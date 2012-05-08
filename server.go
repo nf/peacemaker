@@ -10,8 +10,8 @@ import (
 )
 
 type Server struct {
-	User     map[string]*User
-	Refill   []*Refill
+	User   map[string]*User
+	Refill []*Refill
 
 	datafile string
 	mu       sync.Mutex
@@ -35,16 +35,21 @@ func (s *Server) load() error {
 		return err
 	}
 	defer f.Close()
-	return json.NewDecoder(f).Decode(&s)
+	return json.NewDecoder(f).Decode(s)
 }
 
 func (s *Server) save() error {
+	b, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return err
+	}
 	f, err := os.OpenFile(s.datafile, os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return json.NewEncoder(f).Encode(&s)
+	_, err = f.Write(b)
+	return err
 }
 
 func (s *Server) loop() {
@@ -68,6 +73,9 @@ func (s *Server) tick(t time.Time) (acted bool) {
 	}
 	for name, u := range s.User {
 		if !u.Running(t) {
+			continue
+		}
+		if u.InGracePeriod(t) {
 			continue
 		}
 		// Debit user 1 minute.
@@ -115,6 +123,10 @@ func (s *Server) CheckIn(username *string, ok *bool) error {
 	if u == nil {
 		return errors.New("user not found")
 	}
-	*ok = u.Running(time.Now())
+	now := time.Now()
+	*ok = u.Running(now)
+	if *ok {
+		u.CheckIn(now)
+	}
 	return nil
 }

@@ -21,6 +21,7 @@ type User struct {
 
 func (u *User) Start(t time.Time) error {
 	u.StartTime = t
+	u.LastSeen = t
 	return u.Debit(t, 1)
 }
 
@@ -33,12 +34,15 @@ func (u *User) Running(t time.Time) bool {
 	return t.Sub(u.LastSeen) < deadTimeout
 }
 
-func (u *User) Debit(t time.Time, mins int) error {
+func (u *User) CheckIn(t time.Time) {
 	u.LastSeen = t
-	// Don't deduct minutes during grace period.
-	if t.Sub(u.StartTime) < gracePeriod {
-		return nil
-	}
+}
+
+func (u *User) InGracePeriod(t time.Time) bool {
+	return t.Sub(u.StartTime) < gracePeriod
+}
+
+func (u *User) Debit(t time.Time, mins int) error {
 	for mins > 0 {
 		b := u.AvailableBalance(t)
 		if b == nil {

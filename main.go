@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/rpc"
+	"time"
 )
 
 var (
@@ -31,19 +32,24 @@ func main() {
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	server.mu.Lock()
 	defer server.mu.Unlock()
-	err := statusTemplate.Execute(w, server.User)
+	err := statusTemplate.Execute(w, statusData{server.User, time.Now()})
 	if err != nil {
 		log.Print(err)
 	}
+}
+
+type statusData struct {
+	User map[string]*User
+	Now  time.Time
 }
 
 var statusTemplate = template.Must(template.New("").Parse(`
 <!DOCTYPE html>
 <html>
 <body>
-{{range $name, $u := .}}
+{{range $name, $u := .User}}
 	<h2>{{$name}}</h2>
-	{{if $u.Running}}<h3>Session open</h3>{{end}}
+	{{if $u.Running $.Now}}<h3>Session open</h3>{{end}}
 	{{range $u.Balance}}
 		<p>{{.Minutes}} {{.Kind}} minutes</p>
 	{{end}}
