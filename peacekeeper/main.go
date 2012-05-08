@@ -16,7 +16,8 @@ const checkinInterval = time.Second * 10
 var (
 	serverAddr = flag.String("server", "localhost:7020", "server address")
 	username   = flag.String("user", "", "user name")
-	sleepOnly  = flag.Bool("sleep", false, "don't halt; only sleep")
+	dryRun     = flag.Bool("dry", false, "don't actually shutdown/sleep")
+	sleepOnly  = flag.Bool("sleep", false, "sleep instead of shutting down")
 )
 
 var signals = make(chan os.Signal)
@@ -78,6 +79,10 @@ func handleSignals(c *rpc.Client, done chan bool) {
 
 func shutdown() {
 	log.Println("shutting down machine")
+	if *dryRun {
+		log.Println("(not actually shutting down)")
+		return
+	}
 	opt := "-h"
 	if *sleepOnly {
 		opt = "-s"
