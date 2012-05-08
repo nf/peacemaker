@@ -17,10 +17,16 @@ var (
 	username   = flag.String("user", "", "user name")
 )
 
+var signals = make(chan os.Signal)
+
 func main() {
 	flag.Parse()
-	if err := run(); err != nil {
-		log.Fatal(err)
+	signal.Notify(signals, syscall.SIGTERM)
+	for {
+		if err := run(); err != nil {
+			log.Println("run:", err)
+		}
+		time.Sleep(checkinInterval)
 	}
 }
 
@@ -42,7 +48,9 @@ func run() error {
 		return nil
 	}
 
-	go handleSignals(c)
+	done := make(chan bool)
+	go handleSignals(c, done)
+	defer func() { done <- true }()
 
 	for err == nil {
 		time.Sleep(checkinInterval)
@@ -53,17 +61,17 @@ func run() error {
 			return nil
 		}
 	}
-	log.Println(err)
-	return c.Call("Server.Stop", username, nil)
+	return err
 }
 
-func handleSignals(c *rpc.Client) {
-	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGTERM)
-	<-ch
-	c.Call("Server.Stop", username, nil)
-	c.Close()
-	os.Exit(1)
+func handleSignals(c *rpc.Client, done chan bool) {
+	select {
+	case <-signals:
+		c.Call("Server.Stop", username, nil)
+		c.Close()
+		os.Exit(1)
+	case <-done:
+	}
 }
 
 func shutdown() {
