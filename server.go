@@ -108,17 +108,6 @@ func (s *Server) Stop(username *string, _ *struct{}) error {
 	return nil
 }
 
-func (s *Server) IsOpen(username *string, ok *bool) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	u := s.User[*username]
-	if u == nil {
-		return errors.New("user not found")
-	}
-	*ok = u.Running(time.Now())
-	return nil
-}
-
 func (s *Server) CheckIn(username *string, ok *bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
