@@ -2,44 +2,28 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"sort"
 	"time"
 )
 
-const (
-	deadTimeout = time.Minute * 2
-	gracePeriod = time.Minute * 1
-)
+const deadTimeout = time.Minute * 1
 
 var ZeroBalance = errors.New("no minutes available")
 
 type User struct {
-	Balance   []*Balance
-	StartTime time.Time
-	LastSeen  time.Time
-}
-
-func (u *User) Start(t time.Time) error {
-	u.StartTime = t
-	u.LastSeen = t
-	return u.Debit(t, 1)
-}
-
-func (u *User) Stop() {
-	u.StartTime = time.Time{}
-	u.LastSeen = time.Time{}
+	Balance  []*Balance
+	LastSeen time.Time
 }
 
 func (u *User) Running(t time.Time) bool {
 	return t.Sub(u.LastSeen) < deadTimeout
 }
 
-func (u *User) CheckIn(t time.Time) {
+func (u *User) CheckIn(t time.Time) bool {
 	u.LastSeen = t
-}
-
-func (u *User) InGracePeriod(t time.Time) bool {
-	return t.Sub(u.StartTime) < gracePeriod
+	return u.AvailableBalance(t) != nil
 }
 
 func (u *User) Debit(t time.Time, mins int) error {
@@ -51,10 +35,6 @@ func (u *User) Debit(t time.Time, mins int) error {
 		n, err := b.Debit(t, mins)
 		mins -= n
 		if err == ZeroBalance && n > 0 {
-			if mins == 0 {
-				// Exactly drained this balance.
-				break
-			}
 			// Try next balance.
 			continue
 		}
@@ -93,9 +73,10 @@ type Balance struct {
 func (b *Balance) Available(t time.Time) bool {
 	k := kindMap[b.Kind]
 	if k == nil {
+		log.Println("unknown kind:", b.Kind)
 		return false
 	}
-	return k.Available(t)
+	return k.Available(t) && b.Minutes > 0
 }
 
 func (b *Balance) Debit(t time.Time, mins int) (int, error) {
@@ -106,6 +87,10 @@ func (b *Balance) Debit(t time.Time, mins int) (int, error) {
 	}
 	b.Minutes -= mins
 	return mins, nil
+}
+
+func (b *Balance) String() string {
+	return fmt.Sprintf("Balance %s (%d): %d minutes", b.Kind, b.Priority, b.Minutes)
 }
 
 type balanceSlice []*Balance

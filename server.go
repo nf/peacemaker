@@ -75,45 +75,13 @@ func (s *Server) tick(t time.Time) (acted bool) {
 		if !u.Running(t) {
 			continue
 		}
-		if u.InGracePeriod(t) {
-			continue
-		}
 		// Debit user 1 minute.
 		if err := u.Debit(t, 1); err != nil {
 			log.Printf("stopping %s: %v", name, err)
-			u.Stop()
 		}
 		acted = true
 	}
 	return
-}
-
-func (s *Server) Start(username *string, ok *bool) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	u := s.User[*username]
-	if u == nil {
-		return errors.New("user not found")
-	}
-	if err := u.Start(time.Now()); err != nil {
-		log.Printf("can't start %s: %v", *username, err)
-	} else {
-		log.Printf("start %s", *username)
-		*ok = true
-	}
-	return nil
-}
-
-func (s *Server) Stop(username *string, _ *struct{}) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	u := s.User[*username]
-	if u == nil {
-		return errors.New("user not found")
-	}
-	u.Stop()
-	log.Printf("stop %s", *username)
-	return nil
 }
 
 func (s *Server) CheckIn(username *string, ok *bool) error {
@@ -123,10 +91,6 @@ func (s *Server) CheckIn(username *string, ok *bool) error {
 	if u == nil {
 		return errors.New("user not found")
 	}
-	now := time.Now()
-	*ok = u.Running(now)
-	if *ok {
-		u.CheckIn(now)
-	}
+	*ok = u.CheckIn(time.Now())
 	return nil
 }
