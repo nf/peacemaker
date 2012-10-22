@@ -9,13 +9,12 @@ import (
 	"time"
 )
 
-const checkinInterval = time.Second * 10
-
 var (
-	serverAddr = flag.String("server", "localhost:7020", "server address")
-	username   = flag.String("user", "", "user name")
 	dryRun     = flag.Bool("dry", false, "don't actually shutdown/sleep")
+	interval   = flag.Duration("interval", time.Second*10, "checkin interval")
+	serverAddr = flag.String("server", "localhost:7020", "server address")
 	sleepOnly  = flag.Bool("sleep", false, "sleep instead of shutting down")
+	username   = flag.String("user", "", "user name")
 )
 
 var signals = make(chan os.Signal)
@@ -26,7 +25,7 @@ func main() {
 		if err := run(); err != nil {
 			log.Println("run:", err)
 		}
-		time.Sleep(checkinInterval)
+		time.Sleep(*interval)
 	}
 }
 
@@ -45,7 +44,7 @@ func run() error {
 				shutdown()
 				return nil
 			}
-			time.Sleep(checkinInterval)
+			time.Sleep(*interval)
 		}
 	}
 	return err
