@@ -51,7 +51,7 @@ var statusTemplate = template.Must(template.New("").Parse(`
 	<h2>{{$name}}</h2>
 	{{if $u.Running $.Now}}<h3>Session open</h3>{{end}}
 	{{range $u.Balance}}
-		<p>{{.Minutes}} {{.Kind}} minutes</p>
+		<p>{{.}}</p>
 	{{end}}
 {{end}}
 </body>

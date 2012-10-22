@@ -90,7 +90,11 @@ func (b *Balance) Debit(t time.Time, mins int) (int, error) {
 }
 
 func (b *Balance) String() string {
-	return fmt.Sprintf("Balance %s (%d): %d minutes", b.Kind, b.Priority, b.Minutes)
+	k, ok := kindMap[b.Kind]
+	if !ok {
+		panic("unknown kind " + b.Kind)
+	}
+	return fmt.Sprintf("%s (priority %d): %d minutes (%s)", b.Kind, b.Priority, b.Minutes, k.Times())
 }
 
 type balanceSlice []*Balance

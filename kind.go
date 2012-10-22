@@ -6,6 +6,7 @@ var timeZone = time.Local
 
 type Kind interface {
 	Available(time.Time) bool
+	Times() string
 }
 
 var kindMap = map[string]Kind{
@@ -18,6 +19,10 @@ type Anytime struct{}
 
 func (k Anytime) Available(_ time.Time) bool {
 	return true
+}
+
+func (Anytime) Times() string {
+	return "any time"
 }
 
 type Weekday struct{}
@@ -34,6 +39,10 @@ func (k Weekday) Available(t time.Time) bool {
 	return t.Hour() >= 17
 }
 
+func (Weekday) Times() string {
+	return "5pm to midnight, Monday to Thursday"
+}
+
 type Weekend struct{}
 
 func (k Weekend) Available(t time.Time) bool {
@@ -45,4 +54,8 @@ func (k Weekend) Available(t time.Time) bool {
 		return true
 	}
 	return d == time.Saturday || d == time.Sunday
+}
+
+func (Weekend) Times() string {
+	return "5pm Friday to midnight Sunday"
 }
