@@ -94,3 +94,14 @@ func (s *Server) CheckIn(username *string, ok *bool) error {
 	*ok = u.CheckIn(time.Now())
 	return nil
 }
+
+func (s *Server) setBalance(username, kind string, minutes int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u := s.User[username]
+	if u == nil {
+		return errors.New("user not found")
+	}
+	u.SetBalance(kind, minutes)
+	return nil
+}

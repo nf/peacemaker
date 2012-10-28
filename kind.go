@@ -35,12 +35,12 @@ func (k Weekday) Available(t time.Time) bool {
 		return true
 	}
 
-	// Can only use weekday credit after 5pm.
-	return t.Hour() >= 17
+	// Can only use weekday credit after 4pm.
+	return t.Hour() >= 16
 }
 
 func (Weekday) Times() string {
-	return "5pm to midnight, Monday to Thursday"
+	return "4pm to midnight, Monday to Thursday"
 }
 
 type Weekend struct{}
@@ -48,7 +48,7 @@ type Weekend struct{}
 func (k Weekend) Available(t time.Time) bool {
 	t = t.In(timeZone)
 
-	// Weekend starts at 5pm Friday and ends Sunday night.
+	// Weekend starts at 3pm Friday and ends Sunday night.
 	d := t.Weekday()
 	if d == time.Friday && t.Hour() >= 17 {
 		return true
