@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
-	"net/rpc"
 	"strconv"
 	"time"
 )
@@ -25,10 +25,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	rpc.Register(server)
-	rpc.HandleHTTP()
 	http.HandleFunc("/", statusHandler)
 	http.HandleFunc("/set", setHandler)
+	http.HandleFunc("/checkin", checkinHandler)
 	log.Fatal(http.ListenAndServe(*httpAddr, nil))
 }
 
@@ -57,6 +56,19 @@ func setHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func checkinHandler(w http.ResponseWriter, r *http.Request) {
+	ok, err := server.CheckIn(r.FormValue("username"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !ok {
+		http.Error(w, "out of time", http.StatusForbidden)
+		return
+	}
+	fmt.Fprint(w, "OK")
 }
 
 type statusData struct {

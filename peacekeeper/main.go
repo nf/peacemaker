@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
-	"net/rpc"
-	"os"
+	"net/http"
+	"net/url"
 	"os/exec"
 	"time"
 )
@@ -17,37 +18,35 @@ var (
 	username   = flag.String("user", "", "user name")
 )
 
-var signals = make(chan os.Signal)
+var (
+	transport = &http.Transport{MaxIdleConnsPerHost: 1}
+	client    = &http.Client{Transport: transport}
+)
 
 func main() {
 	flag.Parse()
 	for {
-		if err := run(); err != nil {
-			log.Println("run:", err)
+		if err := checkin(); err != nil {
+			log.Println("checkin:", err)
 		}
 		time.Sleep(*interval)
 	}
 }
 
-func run() error {
-	c, err := rpc.DialHTTP("tcp", *serverAddr)
+func checkin() error {
+	u := fmt.Sprintf("http://%s/checkin", *serverAddr)
+	v := url.Values{"username": []string{*username}}
+	r, err := client.PostForm(u, v)
 	if err != nil {
 		return err
 	}
-	defer c.Close()
-
-	for err == nil {
-		var ok bool
-		err = c.Call("Server.CheckIn", username, &ok)
-		if err == nil {
-			if !ok {
-				shutdown()
-				return nil
-			}
-			time.Sleep(*interval)
-		}
+	r.Body.Close()
+	if r.StatusCode == http.StatusForbidden {
+		transport.CloseIdleConnections()
+		shutdown()
+		time.Sleep(*interval) // sleep twice after shutdown
 	}
-	return err
+	return nil
 }
 
 func shutdown() {

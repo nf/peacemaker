@@ -84,15 +84,15 @@ func (s *Server) tick(t time.Time) (acted bool) {
 	return
 }
 
-func (s *Server) CheckIn(username *string, ok *bool) error {
+func (s *Server) CheckIn(username string) (ok bool, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	u := s.User[*username]
+	u := s.User[username]
 	if u == nil {
-		return errors.New("user not found")
+		return false, errors.New("user not found")
 	}
-	*ok = u.CheckIn(time.Now())
-	return nil
+	ok = u.CheckIn(time.Now())
+	return
 }
 
 func (s *Server) setBalance(username, kind string, minutes int) error {
